@@ -1,6 +1,12 @@
-library(shiny)
-library(shinyjs)
-library(bslib)
+if (!require("shiny"))
+  install.packages("shiny", repos = "http://cran.us.r-project.org")
+if (!require("shinyjs"))
+  install.packages("shinyjs", repos = "http://cran.us.r-project.org")
+if (!require("bslib"))
+  install.packages("bslib", repos = "http://cran.us.r-project.org")
+if (!require("DT"))
+  install.packages("DT", repos = "http://cran.us.r-project.org")
+
 options(shiny.port = 7775)
 
 # class definitions
