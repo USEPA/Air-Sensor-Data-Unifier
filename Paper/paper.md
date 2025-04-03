@@ -54,7 +54,7 @@ The Air Sensor Data Unifier in an R-Shiny application [@RN7; @RN8] that includes
 
 The Dataset Dashboard allows users to upload raw air sensor data files and displays a summary of files already loaded (Figure 1). It works with comma-separated values, tab-separated values, and plain text files (i.e., file extensions .csv, .tsv, and .txt). Files that are uploaded together should be of the same format. The Air Sensor Data Unifier will check that all the file extensions for a batch are the same. Each dataset’s status is tracked across the application. 
 
-![Dataset dashboard where batches of air sensor data can be loaded.](Figure2.png)
+![Dataset dashboard where batches of air sensor data can be loaded.](Figure1.png)
 
 ## Format Wizard
 
