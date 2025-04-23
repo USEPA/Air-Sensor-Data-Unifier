@@ -174,28 +174,32 @@ assignSensorLocations <- function(fileData, dataset, scanConfig) {
 }
 
 loadFullData <- function(datasetList, scanConfig) {
+  # use original ScanConfig when loading all datasets - ScanConfig may get updated
+  # when assigning sensor locations which messes up subsequent coordinate checks
+  origScanConfig <- scanConfig
+  
   fullData <- data.frame()
   timestamps <- c()
   for (dataset in datasetList) {
     for (fileIdx in 1:length(dataset@rawFiles)) {
       rawFile <- dataset@rawFiles[[fileIdx]]
       fileName <- dataset@displayFiles[[fileIdx]]
-      fileData <- parseFile(rawFile, scanConfig@delimiter, scanConfig@headerRowIdx, -1)
+      fileData <- parseFile(rawFile, origScanConfig@delimiter, origScanConfig@headerRowIdx, -1)
       
       # parse and check timestamps
-      fileTimestamps <- parsedTimestamps(fileData, scanConfig)
+      fileTimestamps <- parsedTimestamps(fileData, origScanConfig)
       error <- checkTimestamps(fileTimestamps, fileName)
       if (error != "") {
         return(list("error"=error))
       }
       
       # check latitude and longitude values
-      error <- checkCoordinates(fileData, scanConfig, fileName)
+      error <- checkCoordinates(fileData, origScanConfig, fileName)
       if (error != "") {
         return(list("error"=error))
       }
       
-      results <- assignSensorLocations(fileData, dataset, scanConfig)
+      results <- assignSensorLocations(fileData, dataset, origScanConfig)
       scanConfig <- results$scanConfig
       fullData <- rbind(fullData, results$fileData)
       timestamps <- append(timestamps, fileTimestamps)
