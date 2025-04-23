@@ -8,6 +8,8 @@ unitOptions <- c(
   "degrees F",
   "degrees C",
   "%",
+  "hPa",
+  "Pa",
   "m/s",
   "mph",
   "degrees"
@@ -27,7 +29,7 @@ columnTypes <- list(
   "Temperature" = list("units" = c("degrees F", "degrees C"), "obs" = TRUE),
   "Dew Point" = list("units" = c("degrees F", "degrees C"), "obs" = TRUE),
   "Humidity" = list("units" = c("%"), "obs" = TRUE),
-  "Pressure" = list("units" = c("hPa"), "obs" = TRUE),
+  "Pressure" = list("units" = c("hPa", "Pa"), "obs" = TRUE),
   "Wind Speed" = list("units" = c("m/s", "mph"), "obs" = TRUE),
   "Wind Direction" = list("units" = c("degrees"), "obs" = TRUE),
   "Latitude" = list("units" = c("degrees"), "obs" = FALSE),
