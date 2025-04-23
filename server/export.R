@@ -139,10 +139,12 @@ exportOptions <- function(input, output, session, values) {
         write.table(convertExportToRETIGO(exportData), file, row.names=FALSE, quote=FALSE, sep=",")
       } else {
         if (input$exportTimePeriod == "Raw") {
-          write.table(format(exportData), file, row.names=FALSE, quote=FALSE, sep="\t")
+          write.table(exportData, file, row.names=FALSE, quote=FALSE, sep="\t")
         } else {
-          # output with 3 significant digits
-          write.table(format(exportData, digits=3), file, row.names=FALSE, quote=FALSE, sep="\t")
+          # output with 3 significant digits for data columns
+          formattedData <- exportData[,1:4]
+          formattedData[,5:ncol(exportData)] <- format(exportData[,5:ncol(exportData)], digits=3)
+          write.table(formattedData, file, row.names=FALSE, quote=FALSE, sep="\t")
         }
       }
     }
