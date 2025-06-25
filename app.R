@@ -8,6 +8,8 @@ if (!require("DT"))
   install.packages("DT", repos = "http://cran.us.r-project.org")
 
 options(shiny.port = 7775)
+# allow files up to 100 MB to be uploaded
+options(shiny.maxRequestSize = 100*1024^2)
 
 # class definitions
 source("dataset_format.R")
