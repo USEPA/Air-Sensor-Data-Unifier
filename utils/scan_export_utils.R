@@ -246,9 +246,12 @@ calculateAverages <- function(fullData, tsAverageType) {
     return(list("meanVals"=fullData, "counts"=rep(1, nrow(fullData))))
   }
   
-  # calculate mean and sample count for data columns
-  meanVals <- aggregate(.~ts+lon+lat+id+note, fullData, mean)
-  counts <- aggregate(.~ts+lon+lat+id+note, fullData, length)
+  # calculate mean and sample count for data columns and order by timestamp, then id
+  rawMeanVals <- aggregate(.~ts+lon+lat+id+note, fullData, mean)
+  meanVals <- rawMeanVals[order(rawMeanVals[,1], rawMeanVals[,4]),]
+  
+  rawCounts <- aggregate(.~ts+lon+lat+id+note, fullData, length)
+  counts <- rawCounts[order(rawCounts[,1], rawCounts[,4]),]
   
   numGrpCols <- length(c("ts", "lon", "lat", "id", "note"))
   return(list("meanVals"=meanVals, "counts"=counts[,numGrpCols + 1]))
