@@ -7,6 +7,11 @@ if (!require("bslib"))
 if (!require("DT"))
   install.packages("DT", repos = "http://cran.us.r-project.org")
 
+bslibVer = "0.9.0"
+if (packageVersion("bslib") < bslibVer) {
+  stop(paste("Please update your installation of the bslib library to version", bslibVer, "\nCurrently installed version of bslib:", packageVersion("bslib")))
+}
+
 options(shiny.port = 7775)
 # allow files up to 100 MB to be uploaded
 options(shiny.maxRequestSize = 100*1024^2)
@@ -45,7 +50,9 @@ ui <- tagList(
   inlineCSS(tabDisableCss),
   page_navbar(
     theme = bs_theme(preset="bootstrap"),
-    bg = "rgb(248, 249, 250)",
+    navbar_options = navbar_options(
+      bg = "rgb(248, 249, 250)"
+    ),
     id = "main",
     title = "Air Sensor Data Unifier",
     datasetDashboard,
