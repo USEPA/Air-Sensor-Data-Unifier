@@ -206,12 +206,9 @@ loadFullData <- function(datasetList, scanConfig) {
     }
   }
   
-  # assign unique sensor ID numbers
-  uniqueSensors <- unique(fullData[,scanConfig@sensorCol])
-  uniqueIds <- rep(0, nrow(fullData))
-  for (index in 1:length(uniqueSensors)) {
-    uniqueIds[fullData[,scanConfig@sensorCol] == uniqueSensors[index]] <- index
-  }
+  # assign unique sensor ID numbers based on sensor name and location
+  sensorData <- paste(fullData[,scanConfig@sensorCol], fullData[,scanConfig@longitudeCol], fullData[,scanConfig@latitudeCol])
+  uniqueIds <- as.numeric(as.factor(sensorData))
   
   workTable <- data.frame(timestamps, fullData[,scanConfig@longitudeCol], fullData[,scanConfig@latitudeCol], uniqueIds, fullData[,scanConfig@sensorCol])
   colnames(workTable) <- c("ts", "lon", "lat", "id", "note")
