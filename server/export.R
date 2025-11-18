@@ -141,9 +141,9 @@ exportOptions <- function(input, output, session, values) {
         if (input$exportTimePeriod == "Raw") {
           write.table(exportData, file, row.names=FALSE, quote=FALSE, sep="\t")
         } else {
-          # output with 3 significant digits for data columns
+          # output with 6 significant digits for data columns
           formattedData <- exportData[,1:4]
-          formattedData[,5:ncol(exportData)] <- format(exportData[,5:ncol(exportData)], digits=3)
+          formattedData[,5:ncol(exportData)] <- format(exportData[,5:ncol(exportData)], digits=6)
           write.table(formattedData, file, row.names=FALSE, quote=FALSE, sep="\t")
         }
       }
