@@ -1,11 +1,18 @@
 if (!require("shiny"))
   install.packages("shiny", repos = "http://cran.us.r-project.org")
+  library("shiny")
 if (!require("shinyjs"))
   install.packages("shinyjs", repos = "http://cran.us.r-project.org")
+  library("shinyjs")
 if (!require("bslib"))
   install.packages("bslib", repos = "http://cran.us.r-project.org")
+  library("bslib")
 if (!require("DT"))
   install.packages("DT", repos = "http://cran.us.r-project.org")
+  library("DT")
+if (!require("stringr"))
+  install.packages("stringr", repos = "http://cran.us.r-project.org")
+  library("stringr")
 
 bslibVer = "0.9.0"
 if (packageVersion("bslib") < bslibVer) {
