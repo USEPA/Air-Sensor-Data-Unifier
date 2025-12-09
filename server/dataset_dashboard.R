@@ -22,21 +22,23 @@ datasetDashboard <- function(input, output, session, values) {
   observeEvent(input$fileUpload, {
     clearErrors()
     
-    # check that all files have the same type
-    if (length(input$fileUpload) > 1 && length(unique(input$fileUpload$type)) != 1) {
-      uploadDatasetError("ERROR: Files uploaded together must be of the same type.")
-    } else {
+    # create datasets for each file type
+    newDatasetList <- list()
+    for (fileType in unique(input$fileUpload$type)) {
+      matchType = input$fileUpload[input$fileUpload$type == fileType, ]
+      
       newDatasetId <- datasetId() + 1
       datasetId(newDatasetId)
       
-      newDataset <- Dataset.new(newDatasetId, input$fileUpload$datapath, input$fileUpload$name)
+      newDataset <- Dataset.new(newDatasetId, matchType$datapath, matchType$name)
       # check for empty file
       if (length(newDataset@rawData) == 0) {
         uploadDatasetError("ERROR: The uploaded file is empty.")
         return(NULL)
       }
-      values$datasetList <- c(values$datasetList, newDataset)
+      newDatasetList <- c(newDatasetList, newDataset)
     }
+    values$datasetList <- c(values$datasetList, newDatasetList)
   })
   
   output$dataUploaded <- reactive({
