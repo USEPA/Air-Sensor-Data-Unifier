@@ -82,6 +82,8 @@ exportOptions <- function(input, output, session, values) {
       extension <- "kml"
     } else if (input$exportFormat == "RETIGO") {
       extension <- "csv"
+    }else if (input$exportFormat == "Colorado AQDE") {
+      extension <- "csv"
     }
     paste0(name, ".", extension)
   }
@@ -137,6 +139,8 @@ exportOptions <- function(input, output, session, values) {
         writeLines(writeKML(exportData), file)
       } else if (input$exportFormat == "RETIGO") {
         write.table(convertExportToRETIGO(exportData), file, row.names=FALSE, quote=FALSE, sep=",")
+      } else if (input$exportFormat == "Colorado AQDE") {
+        write.table(convertExportToColoradoAQDE(exportData, input$exportTimePeriod), file, row.names=FALSE, quote=FALSE, sep=",", na="")
       } else {
         if (input$exportTimePeriod == "Raw") {
           write.table(exportData, file, row.names=FALSE, quote=FALSE, sep="\t")

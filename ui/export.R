@@ -16,7 +16,7 @@ exportOptions <- nav_panel(
       conditionalPanel(
         condition = "output.allowExport",
         div(class="text-danger my-3 fw-bold", textOutput("exportError")),
-        selectInput("exportFormat", "Export format", c("ASNAT Standard Format File", "KML", "RETIGO")),
+        selectInput("exportFormat", "Export format", c("ASNAT Standard Format File", "KML", "RETIGO", "Colorado AQDE")),
         selectInput("exportTimePeriod", "Export timestamp", c("Raw", "Hourly", "Daily")),
         #checkboxInput("exportBySensor", "Export each sensor in a separate file"),
         #checkboxInput("exportByDay", "Export each day in a separate file"),

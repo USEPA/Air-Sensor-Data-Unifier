@@ -316,6 +316,224 @@ convertExportToRETIGO <- function(data) {
   data
 }
 
+# timePeriod -> raw, hourly, daily
+convertExportToColoradoAQDE <- function(data, timePeriod) {
+  n <- nrow(data)
+  measure_cols <- if (ncol(data) >= 7) names(data)[6:(ncol(data)-1)] else character(0)
+  if (length(measure_cols) == 0) {
+    return(data.frame(
+      data_steward_name = rep(NA_character_, n),          # string(64)
+      device_id = as.character(data[["note(-)"]]),        # string(64)
+      device_manufacturer_name = rep(NA_character_, n),   # string(64)
+      datetime = as.character(data[["timestamp(UTC)"]]),  # string(27)
+      lat = as.numeric(data[["latitude(deg)"]]),          # decimal(9,5)
+      lon = as.numeric(data[["longitude(deg)"]]),         # decimal(9,5)
+      duration = rep(NA_real_, n),                        # decimal(9,3)
+      parameter_code = rep(NA_integer_, n),               # integer(5)
+      method_code = rep(NA_integer_, n),                  # integer(3)
+      value = rep(NA_real_, n),                           # decimal(12,5)
+      unit_code = rep(NA_integer_, n),                    # integer(3)
+      autoqc_check = rep(NA_integer_, n),                 # integer(1)
+      corr_code = rep(NA_integer_, n),                    # integer(1)
+      review_level_code = rep(NA_integer_, n),            # integer(1)
+      qc_code = rep(NA_integer_, n),                      # integer(1)
+      qualifier_codes = rep(NA_character_, n),            # string(254)
+      data_license_code = rep(NA_integer_, n),            # integer(1)
+      elev = rep(NA_real_, n),                            # decimal(8,2)
+      stringsAsFactors = FALSE
+    ))
+  }
+
+	# Map measurement column name -> parameter_code
+  # https://aqs.epa.gov/aqsweb/documents/codetables/parameters.html
+  # some parameter codes are not found in the table, might need to revisit in future.
+	.param_code_for_col <- function(colname) {
+		# strip trailing "(...)" units
+		base <- sub("\\(.*\\)$", "", colname)
+		# PM2.5 special cases by extension in the name
+		if (grepl("^PM2_5_raw($|_)", base)) return(88501L)  # PM2.5 Raw Data
+		if (grepl("^PM2_5_cal($|_)", base)) return(88502L)  # PM2.5 “FRM-like”
+		# remove known extensions to get base data type
+		base_no_ext <- sub("_(raw|cal|a|b|other)$", "", base, ignore.case = TRUE)
+		codes <- c(
+			"CO" = 42101L,
+			"SO2" = 42401L,
+			"NO" = 42601L,
+			"NO2" = 42602L,
+			"NOx" = 42603L,
+			"O3" = 44201L,
+			"PM2_5" = 88101L,
+			"PM10" = 81102L,
+      "CO2"= 42102L,
+      # "PM1"
+      # "PM4"
+      "Particle_Count" = 87101L,
+      "Temperature" = 68105L, # used Average Ambient Temperature from AQS
+      "Dew_Point" = 62103L,
+      # "Pressure" = ,
+			"Wind_Speed" = 61101L,
+			"Wind_Direction" = 61102L,
+			"Humidity" = 62201L      # Relative Humidity
+		)
+		val <- unname(codes[base_no_ext])[1]
+		if (is.null(val)) NA_integer_ else as.integer(val)
+	}
+
+
+	# Measurement column name -> unit_code (by units in trailing parentheses)
+  # https://aqs.epa.gov/aqsweb/documents/codetables/units.html
+	.unit_code_for_col <- function(colname) {
+		units <- sub("^.*\\(([^()]*)\\)$", "\\1", colname)
+		# no parentheses → no unit
+		if (identical(units, colname)) return(NA_character_)
+
+		codes <- c(
+			"-"        = "123",  # N/A
+			"ug/m3"    = "105",
+			"ppb"      = "008",
+			"ppm"      = "007",
+			"#/cm3"    = "132",
+			"#/m3"     = NA_character_,
+			"degreesF" = "015",
+			"degreesC" = "017",
+			"%"        = "107",
+			"hPa"      = NA_character_,
+			"Pa"       = NA_character_,
+			"inHg"     = "022",
+			"m/s"      = "011",
+			"mph"      = "012",
+			"degrees"  = "014" # Degrees Compass
+		)
+		val <- unname(codes[units])[1]
+		if (is.null(val)) NA_character_ else as.character(val)
+	}
+
+  .normalize_tzd <- function(x) {
+    # Z -> +00:00
+    x <- sub("Z$", "+00:00", x)
+    # ±hhmm -> ±hh:mm
+    x <- sub("([+-])(\\d{2})(\\d{2})$", "\\1\\2:\\3", x)
+    # -00:00 -> +00:00 (UTC normalization)
+    x <- sub("-00:00$", "+00:00", x)
+    x
+  }
+
+  # Duration by export option
+  if (identical(timePeriod, "Hourly")) {
+    avg_secs_num <- 3600
+  } else if (identical(timePeriod, "Daily")) {
+    avg_secs_num <- 86400
+  } else {
+    ts_chr <- as.character(data[["timestamp(UTC)"]])
+    ts <- tryCatch(as.POSIXct(ts_chr, format="%Y-%m-%dT%H:%M:%S%z", tz="UTC"),
+                   error=function(e) as.POSIXct(sub("-0000$", "", ts_chr), format="%Y-%m-%dT%H:%M:%S", tz="UTC"))
+    ts <- ts[order(ts)]
+    diffs <- diff(ts)
+    avg_secs_num <- if (length(diffs) >= 1) mean(as.numeric(diffs), na.rm=TRUE) else NA_real_
+  }
+
+  if (is.na(avg_secs_num)) {
+    duration_str <- NA_character_
+  } else {
+    # Force a decimal point like `3600.` even for integer seconds
+    # up to 3 decimals; keep a dot for whole numbers; blank if NA
+    duration_str <- sprintf("%.3f", avg_secs_num)  # e.g., "60.000", "3.125"
+    duration_str <- sub("0+$", "", duration_str)   # -> "60.", "3.125", "3.1"
+
+    # Decimal(9,3): integer part ≤ 6 digits
+
+    # integers
+    d_int_part <- gsub("\\..*$", "", duration_str)     # remove after .
+    d_int_digits <- nchar(d_int_part)
+
+    # total digits
+    d_digits_total <- nchar(gsub("[^0-9]", "", duration_str))
+
+    # Decimal(9,3)
+    #    - total ≤ 9
+    #    - integers ≤ 6 (9 - 3)
+    if (d_digits_total > 9 || d_int_digits > 6) {
+      duration_str <- NA_character_
+    }
+
+  }
+  
+  out <- data.frame()
+  for (col in measure_cols) {
+    # compute parameter code from the measurement column name
+    param_code_val <- as.integer(.param_code_for_col(col))
+    unit_code_val  <- .unit_code_for_col(col)
+    datetime = .normalize_tzd(as.character(data[["timestamp(UTC)"]]))
+
+
+    # pressureUnit <- sub("^.*\\(([^()]*)\\)$", "\\1", col)
+    # if (identical(pressureUnit, "Pa")) {
+    #   data[[col]] <- data[[col]] / 1000
+    # } else if (identical(pressureUnit, "hPa")) {
+    #   data[[col]] <- data[[col]] / 10
+    # }
+    
+
+
+    # Decimal(12,5) round to 5 decimals, keep '.', max 12 digits total)
+    vals_raw <- suppressWarnings(as.numeric(data[[col]]))
+
+    # round to 5 decimals; keep decimal point; NA -> blank via write.table(na="")
+    value_str <- ifelse(is.na(vals_raw), NA_character_, sprintf("%.5f", vals_raw))
+    value_str <- ifelse(is.na(value_str), NA_character_, sub("0+$", "", value_str))  # e.g., "85.00000" -> "85."
+
+
+
+
+    # max 12 digits (exclude sign and decimal point)
+    # Decimal(12,5): integer part ≤ 7 digits 
+
+    # integers
+    int_part <- gsub("\\..*$", "", value_str)     # remove after .
+    int_part <- gsub("^[+-]", "", int_part)       # remove +- sign
+    int_digits <- nchar(int_part)
+
+    # total digits
+    digits_total <- nchar(gsub("[^0-9]", "", value_str))
+
+    # DECIMAL(12,5) 
+    #    - total ≤ 12
+    #    - integers ≤ 7 (12 - 5)
+    invalid_values <- !is.na(value_str) & (digits_total > 12 | int_digits > 7)
+    value_str[invalid_values] <- NA_character_
+
+    tmp <- data.frame(
+      data_steward_name = NA_character_,
+      device_id = as.character(data[["note(-)"]]),
+      device_manufacturer_name = NA_character_,
+      datetime = datetime, # maximum 27 for colorado, but current datetime is always less than 27 chars so no checking added, commented incase future updates or debugging
+      lat = as.numeric(data[["latitude(deg)"]]),
+      lon = as.numeric(data[["longitude(deg)"]]),
+      duration = duration_str,
+      parameter_code = param_code_val,
+      method_code = NA_integer_,
+      value = value_str,
+      unit_code = unit_code_val,
+      autoqc_check = NA_integer_,
+      corr_code = NA_integer_,
+      review_level_code = NA_integer_,
+      qc_code = NA_integer_,
+      qualifier_codes = NA_character_,
+      data_license_code = NA_integer_,
+      elev = NA_real_,
+      stringsAsFactors = FALSE
+    )
+
+    # if value is blank, corresponding blank entry for unit code.
+    tmp$unit_code[is.na(tmp$value)] <- NA_character_
+
+
+    out <- rbind(out, tmp)
+  }
+
+  out
+}
+
 writeKML <- function(data) {
   paste0(
 "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
